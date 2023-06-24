@@ -84,6 +84,7 @@ app.use('/resources',express.static(__dirname + 'public'));
 app.set('view engine','ejs')
 app.use(expressLayouts)
 
+
 // invocamos a bcryptjs
 const bcryptjs = require('bcryptjs');
 
@@ -142,8 +143,21 @@ app.get('/designer',(req,res)=>{
     res.render('designer')
 })
 
+app.get('/carrito',(req,res)=>{
+    const user = req.session.name
+    connection.query('SELECT carrito.idCliente, carrito.idProducto, carrito.cantidad, productos.precio, productos.imagen, productos.nombre, productos.autor FROM carrito inner join productos WHERE productos.idProducto = carrito.idProducto and carrito.idCliente=?',[user], (error, results) => {
+        if (error) throw error;
+        res.render('carrito', { productos: results });
+      });
+    //res.render('carrito')
+})
+
 app.get('/shop',(req,res)=>{
-    res.render('shop')
+    //res.render('shop')
+    connection.query('SELECT * FROM productos', (error, results) => {
+        if (error) throw error;
+        res.render('shop', { productos: results });
+      });
 })
 
 // autenticacion
@@ -167,6 +181,7 @@ app.post('/auth', async(req,res)=>{
             }else{
                 req.session.loggedin = true
                 req.session.name=results[0].name
+                req.session.id=results[0].idU
                 res.render('login',{
                     alert:true,
                     alertTitle: "Conexion Exitosa",
@@ -195,14 +210,29 @@ app.post('/auth', async(req,res)=>{
 
 app.get('/',(req,res)=>{
     if(req.session.loggedin){
-        res.render('inicio',{
-            login:true,
-            name:req.session.name
+        // busca en el carrito
+        const user = req.session.name        
+        connection.query('SELECT COUNT(*) as cantidad FROM carrito WHERE idCliente = ?',[user], async (error,results)=>{            
+            if(results[0].cantidad!=0){
+                res.render('inicio',{
+                    carrito:true,
+                    cantidad:results[0].cantidad,
+                    login:true,
+                    name:req.session.name
+                });
+            }else{
+                res.render('inicio',{
+                    carrito: false,
+                    login:true,
+                    name:req.session.name
+                });
+            }
         });
     }else{
         res.render('inicio',{
             login:false,
-            name:'Debe iniciar session'
+            //name:'Debe iniciar session'
+            name:''
         })
     }
 })
@@ -214,6 +244,114 @@ app.get('/logout',(req,res)=>{
     })
 })
 
+// - Agregar al carrito
+
+app.get('/agregar/:id', (req,res)=>{      
+    console.log(req.params.id) 
+    //console.log(req.params.cant) 
+
+    if (req.session.name){
+
+    connection.query('INSERT INTO carrito SET ?',{idProducto:req.params.id, idCliente:req.session.name},async(error,results)=>{
+        if(error){
+            console.log(error);
+        }else{
+            //res.send('ALTA EXITOSA')
+            
+            res.render('carrito',{
+                alert:true,
+                alertTitle: "Carrito",
+                alertMessage: "Producto agregado",
+                alertIcon: 'success',
+                showConfirmButton:false,
+                timer:1600,
+                ruta:'shop'
+            })
+        }
+    })
+/*
+    connection.query('SELECT * FROM productos', (error, results) => {
+        if (error){
+             throw error}
+        else{
+            res.redirect('../shop', { productos: results, 
+                alert:true,
+                alertTitle: "Comprar",
+                alertMessage: "Producto añadido",
+                alertIcon: 'success',
+                showConfirmButton:false,
+                timer:1800,
+                ruta:'../shop'
+            });
+        }
+      });
+
+    if(!producto){
+        res.render('shop',{
+                    alert:true,
+                    alertTitle: "Comprar",
+                    alertMessage: "Producto añadido",
+                    alertIcon: 'success',
+                    showConfirmButton:false,
+                    timer:1800,
+                    ruta:'shop'
+                })
+            
+    }else{
+        res.render('shop',{
+            alert:true,
+            alertTitle: "Advertencia",
+            alertMessage: "Ingrese un usuario y/o contraseña",
+            alertIcon: 'warning',
+            showConfirmButton:false,
+            timer:1800,
+            ruta:'shop'
+        })
+    }*/
+}else{
+    res.render('login',{
+        alert:true,
+        alertTitle: "Advertencia",
+        alertMessage: "Debe iniciar session",
+        alertIcon: 'warning',
+        showConfirmButton:false,
+        timer:1800,
+        ruta:'login'
+    })
+}
+})
+
+// comprar - Agregar a pedido y eliminar de carrito
+
+app.post('/comprar/:id1/:id2/:id3', (req,res)=>{  
+var fecha='2023-06-23'
+  connection.query('INSERT INTO pedidos SET ?',{idCliente:req.session.id, fechaPedido:fecha, importe:req.params.id1, metodoPago:req.params.id2, metodoEnvio:req.params.id3},async(error,results)=>{
+    if(error){
+        console.log(error.message);
+    }else{
+        //res.send('ALTA EXITOSA')        
+        res.redirect('shop',{
+            alert:true,
+            alertTitle: "Muchas gracias por tu compra",
+            alertMessage: "Tu orden esta en preparacion",
+            alertIcon: 'success',
+            showConfirmButton:false,
+            timer:1600,
+            ruta:'shop'
+        })
+    }
+    })    
+})
+
+// traer productos
+/*
+app.get('/productos', (req, res) => {
+    connection.query('SELECT * FROM productos', (error, results) => {
+      if (error) throw error;
+      res.render('shop', { productos: results });
+    });
+  });
+*/
 app.listen(3000, ()=>{
     console.log('Servidor ejecutandose')
 })
