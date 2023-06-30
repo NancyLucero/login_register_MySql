@@ -1,0 +1,25 @@
+
+
+https://nic.ar/
+
+
+host gratuitos
+
+https://ar.000webhost.com/
+
+para subir un node js o react
+
+el servicio es cloud sever
+
+vercel es para probar un deploy
+
+certificar en MERCADO PAGO
+
+https://www.mercadopago.com.ar/developers/es/developer-program/checkout-pro
+
+
+bcryptjs dotenv
+
+1031
+
+196
